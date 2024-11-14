@@ -13,6 +13,7 @@ export class ChessboardUI extends Component {
     super(props);
     const themePath = process.env.PUBLIC_URL + '/assets/img/chesspieces/{piece}.png';
     this.state = {
+        puzzleNumber : 0,
         chess : new Chess(mate1[0].fen),
         boardRef : React.createRef(),
         boardId : "myBoard",
@@ -60,12 +61,56 @@ export class ChessboardUI extends Component {
     // console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
   }
 
+  checkIfTheMoveIsCorrect = (playedMove, solutionMove) => {
+    return playedMove === solutionMove;
+  }
+
   onDrop = (source, target, piece, newPos, oldPos, orientation) => {
     var moveToBeMade = source + '-' + target;
     // console.log(moveToBeMade);
     if(this.makeValidMove(moveToBeMade, oldPos)) {
-      console.log('After move...');
-      console.log(this.state.chess.pgn());
+      var playedMove = this.state.chess.pgn().split('\n\n')[1];
+      var solutionMove = mate1[this.state.puzzleNumber].solution;
+      if(this.checkIfTheMoveIsCorrect(playedMove, solutionMove)) {
+        console.log('Move is correct');
+        // Logic to load next puzzle
+        this.setState((prevState) => {
+          return { puzzleNumber : prevState.puzzleNumber + 1};
+        }, () => {
+          // puzzle number updated, reload next puzzle
+          this.setState((prevState2) => {
+            console.log(prevState2);
+            return { defaultConfig : {
+              appearSpeed: 25,
+              draggable: true,
+              dropOffBoard: 'snapback',
+              moveSpeed: 25,
+              onDragStart : this.onDragStart,
+              onDragMove : this.onDragMove,
+              onDrop : this.onDrop,
+              onMoveEnd : this.onMoveEnd,
+              orientation: 'white',
+              position: mate1[1].fen,
+              showErrors: 'console',
+              showNotation: true,
+              snapSpeed: 25,
+              snapbackSpeed: 50,
+              pieceTheme : process.env.PUBLIC_URL + '/assets/img/chesspieces/{piece}.png',
+              sparePieces: false,
+              trashSpeed: 25,
+            }}
+          }, () => {
+            this.setState((prevState3) => {
+              console.log(prevState3.defaultConfig);
+              this.chessBoard = window.ChessBoard(prevState3.boardId, prevState3.defaultConfig);
+            })
+          })
+        });
+        
+      }
+      else {
+        console.log('Move is wrong');
+      }
     }
     else {
       return 'snapback';
