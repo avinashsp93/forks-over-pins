@@ -5,7 +5,7 @@ import './App.css';
 function App() {
   return (
     <div className="App">
-      <h1>Forks over pins</h1>
+      <h1 className='display-1'>Forks over pins</h1>
       <ChessboardUI></ChessboardUI>
     </div>
   );

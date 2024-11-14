@@ -22,6 +22,9 @@ export class ChessboardUI extends Component {
           dropOffBoard: 'snapback',
           moveSpeed: 25,
           onDragStart : this.onDragStart,
+          onDragMove : this.onDragMove,
+          onDrop : this.onDrop,
+          onMoveEnd : this.onMoveEnd,
           orientation: 'white',
           position: mate1[0].fen,
           showErrors: 'console',
@@ -36,17 +39,70 @@ export class ChessboardUI extends Component {
     }
   }
 
-  onDragStart (source, piece, position, orientation) {
-    console.log('Drag started:')
-    console.log('Source: ' + source)
-    console.log('Piece: ' + piece)
-    console.log('Position: ' + this.chessBoard.objToFen(position))
-    console.log('Orientation: ' + orientation)
-    console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+  onDragStart = (source, piece, position, orientation) => {
+    // console.log(this.state.chess.moves());
+    // console.log('Drag started:')
+    // console.log('Source: ' + source)
+    // console.log('Piece: ' + piece)
+    // console.log('Position: ' + window.ChessBoard.objToFen(position))
+    // console.log('Orientation: ' + orientation)
+    // console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+  }
+
+  onDragMove (newLocation, oldLocation, source,
+    piece, position, orientation) {
+    // console.log('New location: ' + newLocation)
+    // console.log('Old location: ' + oldLocation)
+    // console.log('Source: ' + source)
+    // console.log('Piece: ' + piece)
+    // console.log('Position: ' + window.Chessboard.objToFen(position))
+    // console.log('Orientation: ' + orientation)
+    // console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+  }
+
+  onDrop = (source, target, piece, newPos, oldPos, orientation) => {
+    var moveToBeMade = source + '-' + target;
+    // console.log(moveToBeMade);
+    if(this.makeValidMove(moveToBeMade, oldPos)) {
+      console.log('After move...');
+      console.log(this.state.chess.pgn());
+    }
+    else {
+      return 'snapback';
+    }
+
+    // console.log("PGN : " + this.state.chess.pgn());
+    // console.log('Source: ' + source)
+    // console.log('Target: ' + target)
+    // console.log('Piece: ' + piece)
+    // console.log('New position: ' + window.Chessboard.objToFen(newPos))
+    // console.log('Old position: ' + window.Chessboard.objToFen(oldPos))
+    // console.log('Orientation: ' + orientation)
+    // console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+  }
+
+  makeValidMove = (moveToBeMade, currPos) => {
+    var moveResult = '';
+      try {
+        moveResult = this.state.chess.move(moveToBeMade);
+        console.log('Valid move')
+        console.log(moveResult)
+      }
+      catch(err) {
+        // Reload UI with previous pgn
+        
+      }
+      return !(moveResult == '');
+  }
+
+  onMoveEnd (oldPos, newPos) {
+    // console.log('Move animation complete:')
+    // console.log('Old position: ' + window.Chessboard.objToFen(oldPos))
+    // console.log('New position: ' + window.Chessboard.objToFen(newPos))
+    // console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
   }
 
   componentDidMount() {
-    console.log(this.chessBoard);
     if (window && !window.ChessBoard) {
       console.log("Chessboard object is not created");
       return;
@@ -61,6 +117,9 @@ export class ChessboardUI extends Component {
 
     // Initialize chessboard and pieces
     this.chessBoard = window.ChessBoard(this.state.boardId, this.state.defaultConfig);
+
+    // Initialize chess engine with the position
+
     
     // Load FEN
     this.loadFEN();
@@ -75,7 +134,7 @@ export class ChessboardUI extends Component {
   render() {
     return (
         <div>
-            <h1>Chessboard UI</h1>
+            <h2 className='display-1'>Chessboard UI</h2>
             <div id={this.state.boardId} 
             style={{ width: "600px", margin: 'auto'}}
             ref={this.state.boardRef}
