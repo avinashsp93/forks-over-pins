@@ -1,0 +1,124 @@
+.puzzle-panel {
+  width: 100%;
+  max-width: 360px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  border-radius: 8px;
+  background: #f5f5f5;
+}
+
+.puzzle-panel__progress {
+  font-weight: 600;
+  color: #555;
+  margin: 0;
+}
+
+.puzzle-panel__description {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.feedback {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.feedback--idle {
+  background: #e9e9e9;
+  color: #333;
+}
+
+.feedback--correct,
+.feedback--solved {
+  background: #e6f4ea;
+  color: #1e7e34;
+}
+
+.feedback--incorrect {
+  background: #fbe9e7;
+  color: #b02a37;
+}
+
+.puzzle-panel__moves {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.puzzle-panel__moves-label {
+  font-weight: 600;
+  color: #555;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.puzzle-panel__moves-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.puzzle-panel__moves-list li {
+  font-family: 'Courier New', monospace;
+  font-size: 0.95rem;
+  padding: 0.15rem 0;
+}
+
+.puzzle-panel__moves-text {
+  margin: 0;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  font-family: 'Courier New', monospace;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.puzzle-panel__move {
+  display: inline-block;
+  margin: 0 0.4rem 0.2rem 0;
+}
+
+.puzzle-panel__move--latest {
+  font-weight: 700;
+  color: #1e7e34;
+}
+
+.puzzle-panel__moves-empty {
+  margin: 0;
+  color: #888;
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+.puzzle-panel__controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.puzzle-panel__controls button {
+  flex: 1;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background: #2c3e50;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.puzzle-panel__controls button:disabled {
+  background: #b0b8bf;
+  cursor: not-allowed;
+}

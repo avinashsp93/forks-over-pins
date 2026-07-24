@@ -1,59 +1,55 @@
 # AGENTS.md
 
 ## Purpose
-This repository is a small React-based chess tactics app focused on practicing forced mates from preset puzzle positions. The current implementation is centered around a single playable chessboard UI that loads puzzle data from local JSON files and validates user moves against stored solutions.
+This repository is a small React-based chess tactics app focused on practicing forced mates from preset puzzle positions. The app was rewritten from scratch on **Vite + React + TypeScript**, replacing an earlier Create React App prototype. This file documents the current architecture as implemented.
 
 ## Current architecture
-- **Runtime:** Create React App (`react-scripts`) with React 18.
-- **Entry point:** `src/index.js` renders `App` and loads Bootstrap CSS.
-- **Top-level app shell:** `src/App.js` shows the page title and renders `ChessboardUI`.
-- **Main feature component:** `src/components/chessboard-ui/ChessboardUI.jsx`
-  - Class component.
-  - Uses `chess.js` for move legality and PGN generation.
-  - Uses `@chrisoakman/chessboardjs` for the draggable board widget.
-  - Pulls puzzle data from `src/data/mate_in_1.json`, `mate_in_2.json`, and `mate_in_3.json`.
-- **Static assets:** chess piece images are expected under `public/assets/img/chesspieces/{piece}.png` and the external chessboardjs CSS/JS is loaded from CDN in `public/index.html`.
+- **Runtime:** Vite + React 19 + TypeScript (`npm create vite@latest -- --template react-ts`).
+- **Entry point:** `src/main.tsx` renders `<App />` into `#root`; `index.html` is the Vite entry HTML (no external CDN scripts, no jQuery).
+- **Top-level app shell:** `src/App.tsx` composes `Header`, `PuzzleChessboard`, and `PuzzlePanel`, all driven by the `usePuzzleEngine` hook.
+- **Chessboard component:** [`react-chessboard`](https://github.com/Clariity/react-chessboard) v5 (`options`-object API), wrapped in `src/components/Chessboard/PuzzleChessboard.tsx`. Board border color reflects move status (idle/correct/incorrect/illegal/solved).
+- **Move legality / PGN:** `chess.js`, used inside `src/hooks/usePuzzleEngine.ts`.
+- **State management:** function components + hooks. `usePuzzleEngine` (a custom hook, not a reducer) owns all puzzle/game state: active puzzle set, puzzle index, the `Chess` game instance, ply index into the solution, move status, and feedback message.
+- **Styling:** plain CSS files colocated per component (`Header.css`, `PuzzlePanel.css`, `PuzzleChessboard.css`, `App.css`, `index.css`). No Bootstrap/CDN dependency.
+- **Testing:** Vitest + React Testing Library. `src/App.test.tsx` covers rendering; `src/hooks/usePuzzleEngine.test.ts` covers illegal/incorrect/correct move handling, puzzle advancement, and puzzle-set switching. Run with `npm run test`.
+- **Static assets:** `public/favicon.svg` only; piece art comes from `react-chessboard`'s built-in piece set (no manual PNGs needed).
 
 ## Implemented behavior
-- The app currently renders a heading and a chessboard.
-- `ChessboardUI` initializes a `Chess` instance from the first `mate_in_1.json` FEN.
-- A player can drag pieces on the board.
-- `onDrop` attempts to apply the move with `chess.js`.
-- If the move is legal, the component compares the generated PGN move text with the stored `solution` string for the current mate-in-1 puzzle.
-- When the move matches the expected solution, the component increments `puzzleNumber` and reinitializes the board for the next puzzle.
-
-## Important implementation notes
-- The progression logic is only wired for `mate_in_1` puzzles right now even though mate-in-2 and mate-in-3 datasets are imported.
-- The next-puzzle board position is currently hardcoded to `mate1[1].fen` during reset instead of using the updated puzzle index dynamically.
-- `loadFEN()` exists but is empty.
-- `makeValidMove()` swallows invalid move errors and only returns a boolean-like result.
-- The app still contains Create React App starter leftovers:
-  - `README.md` is the default CRA README.
-  - `src/App.test.js` still checks for a "learn react" link that no longer exists.
-  - `src/App.js` imports `logo.svg` but does not use it.
-  - Default CRA files such as `reportWebVitals.js`, `setupTests.js`, `logo.svg`, and generic CSS remain in place.
-- `public/index.html` still uses the default title/description and depends on global CDN scripts for jQuery and chessboardjs.
+- `usePuzzleEngine` initializes a `Chess` instance from the active puzzle's FEN.
+- The player (always White) drags a piece; `PuzzleChessboard`'s `onPieceDrop` calls `attemptMove(sourceSquare, targetSquare)`.
+- `attemptMove` plays the move on a **cloned** `Chess` instance first:
+  - If illegal, status becomes `'illegal'` and the real game state is untouched (board snaps back).
+  - If legal but its SAN doesn't match the expected next entry in `puzzle.solution` (compared with check/mate symbols stripped), status becomes `'incorrect'` and the real game state is untouched.
+  - If it matches, the move is committed to real state. If more plies remain, the engine auto-plays the **scripted opponent reply** from `puzzle.solution` after a short delay (`OPPONENT_REPLY_DELAY_MS`), then either sets status to `'idle'` (more to solve) or `'solved'` (done).
+- Puzzle data format: `{ description: string; fen: string; solution: string[] }`, where `solution` is the **full mating line in SAN**, alternating player and scripted-opponent moves (e.g. `["Rc3", "Kh8", "Rc8#"]` for mate-in-2). This is a deliberate design choice: the opponent's replies are **scripted, not computed** — the engine does not need black's move to be objectively forced/unique, since it always auto-plays exactly what's stored in `solution`.
+- `nextPuzzle()` advances via `(puzzleIndex + 1) % puzzles.length` — never a hardcoded FEN/index (this was the core bug in the old CRA prototype and has been fixed by construction).
+- `selectSet(set)` switches the active puzzle set (`mate_in_1` / `mate_in_2` / `mate_in_3`) and resets to puzzle index 0.
+- All puzzle JSON in `src/data/*.json` was validated programmatically (a throwaway Node script using `chess.js` replayed every `solution` line and asserted `isCheckmate()` on the final position) before being committed — do the same if you add more puzzles.
 
 ## Repository map
-- `src/App.js` – page shell.
-- `src/components/chessboard-ui/ChessboardUI.jsx` – main puzzle UI and move validation logic.
-- `src/data/mate_in_1.json` – implemented puzzle source currently used by the UI.
-- `src/data/mate_in_2.json` / `src/data/mate_in_3.json` – imported datasets not yet integrated into flow.
-- `src/data/solutions.txt` – additional solution reference data, not currently used by the app.
-- `public/index.html` – loads external chessboardjs assets and bootstraps the React app.
+- `index.html` — Vite entry HTML.
+- `src/main.tsx` — React root.
+- `src/App.tsx` / `src/App.css` — page shell, wires `usePuzzleEngine` to the header/board/panel.
+- `src/hooks/usePuzzleEngine.ts` — core puzzle/game engine (state + move validation + progression). Treat this as the primary source of truth for gameplay flow, replacing the old class-based `ChessboardUI`.
+- `src/components/Header/` — title + puzzle-set selector tabs.
+- `src/components/Chessboard/PuzzleChessboard.tsx` — thin `react-chessboard` wrapper; do not add game logic here, delegate to `usePuzzleEngine`.
+- `src/components/PuzzlePanel/` — puzzle description, feedback banner, Retry/Next controls, progress counter.
+- `src/types/puzzle.ts` — `Puzzle`, `PuzzleSetKey`, `PuzzleSets`, `MoveStatus` types and `PUZZLE_SET_LABELS`.
+- `src/data/mate_in_1.json`, `mate_in_2.json`, `mate_in_3.json` — puzzle datasets (currently 3 / 1 / 1 seed puzzles respectively; intended to be expanded).
+- `src/App.test.tsx`, `src/hooks/usePuzzleEngine.test.ts` — Vitest + RTL tests.
+- `vite.config.ts` — includes a `test` block (jsdom environment, `src/setupTests.ts`) for Vitest.
 
 ## Development guidance for future agents
-1. Treat `ChessboardUI.jsx` as the primary source of truth for gameplay flow.
-2. Preserve the interplay between `chess.js` state and the visual `window.ChessBoard(...)` widget when refactoring.
-3. Prefer replacing hardcoded puzzle advancement logic with index-based state derived from the active puzzle collection.
-4. If modernizing, consider removing jQuery/global script dependencies and using a React-native chessboard integration or a wrapper.
-5. Update tests whenever UI text or puzzle flow changes; the current starter test is already stale.
-6. Keep puzzle data format compatible with existing records: objects currently include `description`, `fen`, and `solution`.
+1. Treat `usePuzzleEngine` as the source of truth for gameplay flow; UI components should stay presentational and call its exposed functions (`attemptMove`, `nextPuzzle`, `retryPuzzle`, `selectSet`).
+2. Never hardcode a specific puzzle FEN/index for "next puzzle" — always derive it from `puzzleIndex` / `puzzles.length`.
+3. When adding puzzles, keep the `solution` array as a full SAN line (player + scripted opponent moves) and validate it with a quick `chess.js` script (replay the line, assert `isCheckmate()`) before committing — don't hand-verify mate patterns by inspection alone.
+4. Do not reintroduce jQuery, global `window.ChessBoard`, or CDN `<script>` tags — `react-chessboard` is a normal npm dependency configured via its `options` object.
+5. Keep puzzle data field names stable (`description`, `fen`, `solution`) since `src/types/puzzle.ts` and `usePuzzleEngine` depend on them.
+6. Run `npm run build`, `npm run lint` (oxlint), and `npm run test` (Vitest) before considering a change complete — all three are wired up and passing as of this rewrite.
 
-## Suggested near-term maintenance tasks
-- Replace the default README with project-specific documentation.
-- Fix puzzle advancement so it uses the current puzzle index correctly.
-- Add support for choosing and playing mate-in-1 / 2 / 3 sets.
-- Surface correct/incorrect feedback in the UI instead of only logging to the console.
-- Add real tests for rendering, move validation, and puzzle progression.
-- Clean up unused CRA starter files and imports.
+## Suggested near-term maintenance / follow-up tasks
+- Expand puzzle datasets (currently minimal seed data: 3 mate-in-1, 1 mate-in-2, 1 mate-in-3) with more thematically varied, ideally uniquely-forced mates.
+- Decide whether to move to `localStorage`-backed streak/progress tracking.
+- Add square highlighting for the last move / hint system using `react-chessboard`'s `squareStyles` option.
+- Consider extracting puzzle-engine state into `useReducer` if the state shape grows more complex.
+- Add responsive/mobile visual polish pass beyond the current flex-wrap layout.

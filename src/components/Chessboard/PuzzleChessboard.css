@@ -1,0 +1,5 @@
+.puzzle-chessboard {
+  width: min(85vh, 92vw, 640px);
+  max-width: 100%;
+  margin: 0 auto;
+}

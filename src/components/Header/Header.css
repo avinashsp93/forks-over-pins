@@ -1,0 +1,35 @@
+.app-header {
+  text-align: center;
+  padding: 1.5rem 1rem 1rem;
+}
+
+.app-header__title {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.app-header__subtitle {
+  margin: 0.25rem 0 1rem;
+  color: #666;
+}
+
+.app-header__set-selector {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.set-tab {
+  padding: 0.5rem 1rem;
+  border: 2px solid #2c3e50;
+  border-radius: 999px;
+  background: white;
+  color: #2c3e50;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.set-tab--active {
+  background: #2c3e50;
+  color: white;
+}
