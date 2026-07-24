@@ -1,26 +1,14 @@
-import 'bootstrap/dist/css/bootstrap.min.css';
-import Header from './components/Header.js';
-import UserChoice from './components/UserChoice.js';
+import logo from './logo.svg';
+import ChessboardUI from './components/chessboard-ui/ChessboardUI';
 import './App.css';
-import React from 'react';
-import ChessboardUI from './components/ChessboardUI.js';
 
 function App() {
-  return (
-    <div className="App">
-      {/* Container */}
-      <div className="container">
-        {/* Header */}
-        <Header />
-
-        {/* User's choice goes here, selects if he wants to solve mate in 1, 2 or 3 */}
-        <UserChoice />
-
-        {/* Chessboard component goes here*/}
-        <ChessboardUI />
-      </div>
-    </div>
-  );
+    return (
+        <div className="App">
+            <h1 className='display-1'>Forks over pins</h1>
+            <ChessboardUI></ChessboardUI>
+        </div>
+    );
 }
 
 export default App;
