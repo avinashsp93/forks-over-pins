@@ -1,23 +1,24 @@
-import logo from './logo.svg';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import Header from './components/Header.js';
+import UserChoice from './components/UserChoice.js';
 import './App.css';
+import React from 'react';
+import ChessboardUI from './components/ChessboardUI.js';
 
 function App() {
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      {/* Container */}
+      <div className="container">
+        {/* Header */}
+        <Header />
+
+        {/* User's choice goes here, selects if he wants to solve mate in 1, 2 or 3 */}
+        <UserChoice />
+
+        {/* Chessboard component goes here*/}
+        <ChessboardUI />
+      </div>
     </div>
   );
 }
