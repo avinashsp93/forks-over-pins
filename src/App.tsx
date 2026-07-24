@@ -13,6 +13,7 @@ function App() {
     fen,
     orientation,
     moveHistory,
+    boardKey,
     status,
     message,
     selectSet,
@@ -30,7 +31,7 @@ function App() {
             fen={fen}
             status={status}
             orientation={orientation}
-            puzzleKey={`${activeSet}-${puzzleIndex}`}
+            puzzleKey={boardKey}
             onMove={attemptMove}
           />
           <PuzzlePanel

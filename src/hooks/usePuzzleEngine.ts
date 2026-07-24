@@ -29,9 +29,22 @@ export function usePuzzleEngine(initialSet: PuzzleSetKey = 'mate_in_1') {
   const [plyIndex, setPlyIndex] = useState(0);
   const [status, setStatus] = useState<MoveStatus>('idle');
   const [message, setMessage] = useState<string>('Your move. Find the winning move!');
+  // Bumped on every reset (next puzzle, retry, or set switch) - lets the
+  // board tell "a fresh, unrelated starting position was just loaded" apart
+  // from "a real move was just played", even when retrying the same puzzle.
+  const [resetNonce, setResetNonce] = useState(0);
   const replyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const resetToPuzzle = useCallback((set: PuzzleSetKey, index: number) => {
+  // `remount` forces the board to fully remount (via `boardKey`), which
+  // instantly snaps to the new position with no animation - used for retry
+  // and puzzle-set switches, where the old position isn't a meaningful
+  // "starting point" to animate from and a clean reset avoids leftover
+  // animation state corrupting the next move. Advancing to the next puzzle
+  // *does* want an animated transition (current board -> next puzzle's
+  // starting position), so it skips the remount and just updates `fen`,
+  // letting react-chessboard animate the piece-level diff between the two
+  // positions on the same mounted board instance.
+  const resetToPuzzle = useCallback((set: PuzzleSetKey, index: number, remount: boolean) => {
     if (replyTimeoutRef.current) {
       clearTimeout(replyTimeoutRef.current);
       replyTimeoutRef.current = null;
@@ -41,13 +54,16 @@ export function usePuzzleEngine(initialSet: PuzzleSetKey = 'mate_in_1') {
     setPlyIndex(0);
     setStatus('idle');
     setMessage('Your move. Find the winning move!');
+    if (remount) {
+      setResetNonce((n) => n + 1);
+    }
   }, []);
 
   const selectSet = useCallback(
     (set: PuzzleSetKey) => {
       setActiveSet(set);
       setPuzzleIndex(0);
-      resetToPuzzle(set, 0);
+      resetToPuzzle(set, 0, true);
     },
     [resetToPuzzle],
   );
@@ -55,11 +71,11 @@ export function usePuzzleEngine(initialSet: PuzzleSetKey = 'mate_in_1') {
   const nextPuzzle = useCallback(() => {
     const nextIndex = (puzzleIndex + 1) % puzzles.length;
     setPuzzleIndex(nextIndex);
-    resetToPuzzle(activeSet, nextIndex);
+    resetToPuzzle(activeSet, nextIndex, false);
   }, [activeSet, puzzleIndex, puzzles.length, resetToPuzzle]);
 
   const retryPuzzle = useCallback(() => {
-    resetToPuzzle(activeSet, puzzleIndex);
+    resetToPuzzle(activeSet, puzzleIndex, true);
   }, [activeSet, puzzleIndex, resetToPuzzle]);
 
   /**
@@ -139,6 +155,13 @@ export function usePuzzleEngine(initialSet: PuzzleSetKey = 'mate_in_1') {
     [puzzle.fen],
   );
 
+  // Forces a full board remount only for retry/set-switch resets (bumped by
+  // resetToPuzzle's `remount` flag) - advancing to the next puzzle
+  // deliberately leaves this unchanged so the board stays mounted and
+  // animates the transition from the current position to the next puzzle's
+  // starting position instead of snapping instantly.
+  const boardKey = `board-${resetNonce}`;
+
   return {
     activeSet,
     puzzles,
@@ -148,6 +171,7 @@ export function usePuzzleEngine(initialSet: PuzzleSetKey = 'mate_in_1') {
     fen,
     orientation,
     moveHistory,
+    boardKey,
     status,
     message,
     selectSet,

@@ -21,6 +21,14 @@ const STATUS_CLASS: Record<MoveStatus, string> = {
   illegal: 'feedback feedback--incorrect',
 };
 
+const STATUS_BORDER_COLOR: Record<MoveStatus, string> = {
+  idle: '#3a3a3a',
+  correct: '#3fae4f',
+  solved: '#3fae4f',
+  incorrect: '#d9534f',
+  illegal: '#d9534f',
+};
+
 // Groups a flat list of SAN moves into numbered move pairs (e.g. "1. e4 e5"),
 // honouring the puzzle's starting move number and side to move so
 // black-to-move puzzles correctly start with "1... " instead of "1. ".
@@ -63,7 +71,13 @@ export function PuzzlePanel({
   const lastMoveIndex = formattedMoves.length - 1;
 
   return (
-    <section className="puzzle-panel">
+    <section
+      className="puzzle-panel"
+      style={{
+        boxShadow: `0 0 10px 1px ${STATUS_BORDER_COLOR[status]}`,
+        transition: 'box-shadow 150ms ease-in-out',
+      }}
+    >
       <p className="puzzle-panel__progress">
         Puzzle {puzzleIndex + 1} / {puzzleCount}
       </p>
