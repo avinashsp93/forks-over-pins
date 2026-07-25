@@ -45,6 +45,25 @@
   color: #b02a37;
 }
 
+.puzzle-panel__status-icon {
+  margin-right: 0.4rem;
+}
+
+.puzzle-panel__performance {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.puzzle-panel__performance-icons {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
 .puzzle-panel__moves {
   display: flex;
   flex-direction: column;
@@ -121,4 +140,17 @@
 .puzzle-panel__controls button:disabled {
   background: #b0b8bf;
   cursor: not-allowed;
+}
+
+.puzzle-panel__auto-advance {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #555;
+  cursor: pointer;
+}
+
+.puzzle-panel__auto-advance input {
+  cursor: pointer;
 }

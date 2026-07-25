@@ -16,6 +16,11 @@ function App() {
     boardKey,
     status,
     message,
+    performanceHistory,
+    autoAdvance,
+    toggleAutoAdvance,
+    shuffle,
+    toggleShuffle,
     selectSet,
     nextPuzzle,
     retryPuzzle,
@@ -42,8 +47,13 @@ function App() {
             moveHistory={moveHistory}
             status={status}
             message={message}
+            performanceHistory={performanceHistory}
+            autoAdvance={autoAdvance}
             onNext={nextPuzzle}
             onRetry={retryPuzzle}
+            onToggleAutoAdvance={toggleAutoAdvance}
+            shuffle={shuffle}
+            onToggleShuffle={toggleShuffle}
           />
         </div>
       </main>

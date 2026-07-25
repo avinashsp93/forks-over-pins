@@ -1,9 +1,9 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Chess } from 'chess.js';
 import mateIn1 from '../data/mate_in_1.json';
 import mateIn2 from '../data/mate_in_2.json';
 import mateIn3 from '../data/mate_in_3.json';
-import type { MoveStatus, Puzzle, PuzzleSetKey, PuzzleSets } from '../types/puzzle';
+import type { MoveStatus, Puzzle, PuzzleSetKey, PuzzleSets, PerformanceOutcome } from '../types/puzzle';
 
 const PUZZLE_SETS: PuzzleSets = {
   mate_in_1: mateIn1 as Puzzle[],
@@ -18,6 +18,10 @@ function normalizeSan(san: string): string {
 }
 
 const OPPONENT_REPLY_DELAY_MS = 400;
+// Delay before auto-advancing to the next puzzle when the "jump to next
+// puzzle" toggle is on, so the player still gets to see the "solved"
+// feedback/animation before the board moves on.
+const AUTO_ADVANCE_DELAY_MS = 900;
 
 export function usePuzzleEngine(initialSet: PuzzleSetKey = 'mate_in_1') {
   const [activeSet, setActiveSet] = useState<PuzzleSetKey>(initialSet);
@@ -34,6 +38,32 @@ export function usePuzzleEngine(initialSet: PuzzleSetKey = 'mate_in_1') {
   // from "a real move was just played", even when retrying the same puzzle.
   const [resetNonce, setResetNonce] = useState(0);
   const replyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const advanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Accumulates one entry per *puzzle attempt* ('solved' once the puzzle's
+  // final move is played correctly, 'incorrect' once the attempt is given
+  // up on - either via Retry, or immediately when "jump to next puzzle" is
+  // on and a wrong move is made) so the panel can show a running
+  // checkmark/crossmark history of the player's performance - one icon per
+  // puzzle, not per move. Never cleared by retry/next/set-switch - it's a
+  // running log for the whole session as the player progresses through the
+  // puzzle set.
+  const [performanceHistory, setPerformanceHistory] = useState<PerformanceOutcome[]>([]);
+
+  // "Jump to next puzzle" toggle: when on, solving a puzzle auto-advances to
+  // the next one instead of waiting for the player to click "Next Puzzle".
+  // Read via a ref inside timeouts/callbacks so a toggle mid-solve is always
+  // respected using its latest value, not a stale closure.
+  const [autoAdvance, setAutoAdvance] = useState(false);
+  const autoAdvanceRef = useRef(autoAdvance);
+  useEffect(() => {
+    autoAdvanceRef.current = autoAdvance;
+  }, [autoAdvance]);
+
+  // "Shuffle order" toggle: when on, advancing picks a random puzzle from
+  // the active set (never repeating the just-solved one) instead of the
+  // next incremental index.
+  const [shuffle, setShuffle] = useState(false);
 
   // `remount` forces the board to fully remount (via `boardKey`), which
   // instantly snaps to the new position with no animation - used for retry
@@ -48,6 +78,10 @@ export function usePuzzleEngine(initialSet: PuzzleSetKey = 'mate_in_1') {
     if (replyTimeoutRef.current) {
       clearTimeout(replyTimeoutRef.current);
       replyTimeoutRef.current = null;
+    }
+    if (advanceTimeoutRef.current) {
+      clearTimeout(advanceTimeoutRef.current);
+      advanceTimeoutRef.current = null;
     }
     const nextPuzzle = PUZZLE_SETS[set][index];
     setGame(new Chess(nextPuzzle.fen));
@@ -69,14 +103,27 @@ export function usePuzzleEngine(initialSet: PuzzleSetKey = 'mate_in_1') {
   );
 
   const nextPuzzle = useCallback(() => {
-    const nextIndex = (puzzleIndex + 1) % puzzles.length;
+    let nextIndex: number;
+    if (shuffle && puzzles.length > 1) {
+      do {
+        nextIndex = Math.floor(Math.random() * puzzles.length);
+      } while (nextIndex === puzzleIndex);
+    } else {
+      nextIndex = (puzzleIndex + 1) % puzzles.length;
+    }
     setPuzzleIndex(nextIndex);
     resetToPuzzle(activeSet, nextIndex, false);
-  }, [activeSet, puzzleIndex, puzzles.length, resetToPuzzle]);
+  }, [activeSet, puzzleIndex, puzzles.length, resetToPuzzle, shuffle]);
 
   const retryPuzzle = useCallback(() => {
+    // Retrying after at least one wrong move records exactly one "failed"
+    // entry for this puzzle attempt, before the board resets. Retrying a
+    // puzzle that hasn't been attempted yet (still 'idle') records nothing.
+    if (status === 'incorrect') {
+      setPerformanceHistory((history) => [...history, 'incorrect']);
+    }
     resetToPuzzle(activeSet, puzzleIndex, true);
-  }, [activeSet, puzzleIndex, resetToPuzzle]);
+  }, [activeSet, puzzleIndex, resetToPuzzle, status]);
 
   /**
    * Attempts to play the player's (White's) move. Returns true if the move
@@ -102,10 +149,32 @@ export function usePuzzleEngine(initialSet: PuzzleSetKey = 'mate_in_1') {
         return false;
       }
 
+      // If "jump to next puzzle" is on, auto-advance shortly after the
+      // puzzle's outcome (solved or failed) is decided, so the player still
+      // sees the solved/failed feedback before the board moves on.
+      const scheduleAutoAdvance = () => {
+        if (!autoAdvanceRef.current) return;
+        if (advanceTimeoutRef.current) {
+          clearTimeout(advanceTimeoutRef.current);
+        }
+        advanceTimeoutRef.current = setTimeout(() => {
+          nextPuzzle();
+        }, AUTO_ADVANCE_DELAY_MS);
+      };
+
       const expectedSan = puzzle.solution[plyIndex];
       if (!expectedSan || normalizeSan(moveResult.san) !== normalizeSan(expectedSan)) {
         setStatus('incorrect');
-        setMessage("That's not the winning move. Try again.");
+        if (autoAdvanceRef.current) {
+          // With auto-advance on, a wrong move *is* the final outcome for
+          // this puzzle attempt (no manual Retry will happen), so record it
+          // here rather than waiting for retryPuzzle().
+          setMessage("That's not the winning move. Moving to the next puzzle...");
+          setPerformanceHistory((history) => [...history, 'incorrect']);
+          scheduleAutoAdvance();
+        } else {
+          setMessage("That's not the winning move. Try again.");
+        }
         return false;
       }
 
@@ -116,6 +185,8 @@ export function usePuzzleEngine(initialSet: PuzzleSetKey = 'mate_in_1') {
         setPlyIndex(nextPly);
         setStatus('solved');
         setMessage('Puzzle solved! \u{1F389}');
+        setPerformanceHistory((history) => [...history, 'solved']);
+        scheduleAutoAdvance();
         return true;
       }
 
@@ -132,6 +203,8 @@ export function usePuzzleEngine(initialSet: PuzzleSetKey = 'mate_in_1') {
         if (plyAfterReply >= puzzle.solution.length) {
           setStatus('solved');
           setMessage('Puzzle solved! \u{1F389}');
+          setPerformanceHistory((history) => [...history, 'solved']);
+          scheduleAutoAdvance();
         } else {
           setStatus('idle');
           setMessage('Correct! Keep going.');
@@ -140,7 +213,7 @@ export function usePuzzleEngine(initialSet: PuzzleSetKey = 'mate_in_1') {
 
       return true;
     },
-    [game, plyIndex, puzzle, status],
+    [game, plyIndex, puzzle, status, nextPuzzle],
   );
 
   const fen = useMemo(() => game.fen(), [game]);
@@ -162,6 +235,14 @@ export function usePuzzleEngine(initialSet: PuzzleSetKey = 'mate_in_1') {
   // starting position instead of snapping instantly.
   const boardKey = `board-${resetNonce}`;
 
+  const toggleAutoAdvance = useCallback(() => {
+    setAutoAdvance((value) => !value);
+  }, []);
+
+  const toggleShuffle = useCallback(() => {
+    setShuffle((value) => !value);
+  }, []);
+
   return {
     activeSet,
     puzzles,
@@ -174,6 +255,11 @@ export function usePuzzleEngine(initialSet: PuzzleSetKey = 'mate_in_1') {
     boardKey,
     status,
     message,
+    performanceHistory,
+    autoAdvance,
+    toggleAutoAdvance,
+    shuffle,
+    toggleShuffle,
     selectSet,
     nextPuzzle,
     retryPuzzle,

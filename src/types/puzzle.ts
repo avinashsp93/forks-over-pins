@@ -21,3 +21,8 @@ export const PUZZLE_SET_LABELS: Record<PuzzleSetKey, string> = {
 };
 
 export type MoveStatus = 'idle' | 'correct' | 'incorrect' | 'illegal' | 'solved';
+
+// One entry per recorded move outcome, used to build a running
+// checkmark/crossmark performance history (see usePuzzleEngine's
+// `performanceHistory`).
+export type PerformanceOutcome = 'solved' | 'incorrect';

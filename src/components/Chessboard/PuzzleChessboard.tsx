@@ -14,6 +14,11 @@ type PuzzleChessboardProps = {
   ) => boolean;
 };
 
+// react-chessboard's default animation speed (300ms) slowed down to 0.8x
+// speed (i.e. 1.25x the duration) so piece-slide transitions - including
+// the next-puzzle transition - read more clearly.
+const ANIMATION_DURATION_MS = 300 / 0.8;
+
 const STATUS_BORDER_COLOR: Record<MoveStatus, string> = {
   idle: "#3a3a3a",
   correct: "#3fae4f",
@@ -58,6 +63,7 @@ export function PuzzleChessboard({
       transition: "box-shadow 150ms ease-in-out",
     },
     allowDragging: status !== "solved",
+    animationDurationInMs: ANIMATION_DURATION_MS,
   };
 
   return (
